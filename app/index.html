@@ -1,80 +1,128 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    />
-    <title>Truestake Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-      html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-      body { background:#0e0f12; color:#fff; }
-      .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
-      .card { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; margin: 12px 0; }
-      .row { display:flex; gap:12px; flex-wrap:wrap; }
-      button { padding:12px 16px; border-radius:12px; border:0; background:#2b84ff; color:#fff; font-weight:600; }
-      pre { white-space: pre-wrap; word-break: break-word; }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <h2>Truestake Mini App</h2>
+<head>
+  <meta charset="utf-8" />
+  <title>TrueStake Mini App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-      <div class="card" id="userCard">
-        <div><b>User</b></div>
-        <div id="userInfo">Loading…</div>
-      </div>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-      <div class="card">
-        <div class="row">
-          <button id="pingApi">Ping API</button>
-          <button id="closeApp">Close</button>
-        </div>
-      </div>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #050816;
+      color: #e5e5e5;
+    }
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 12px;
+    }
+    .status {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+    .user {
+      font-size: 16px;
+      margin: 8px 0 16px;
+    }
+    .box {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      font-size: 11px;
+      word-break: break-all;
+      max-height: 120px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TrueStake Mini App</h1>
+  <div id="status" class="status">Инициализация...</div>
+  <div id="user" class="user">User: unknown</div>
+  <div class="box" id="debug"></div>
+</div>
 
-      <div class="card">
-        <div><b>initData</b></div>
-        <pre id="initData"></pre>
-      </div>
-    </div>
+<script>
+  const API_BASE = "https://api.corsarinc.ru";
 
-    <script>
-      const tg = window.Telegram?.WebApp;
+  const $status = document.getElementById("status");
+  const $user = document.getElementById("user");
+  const $debug = document.getElementById("debug");
 
-      // Инициализация Telegram Mini App
-      tg?.ready();
-      try { tg?.expand(); } catch(e) {}
-      try { tg?.setHeaderColor("#000000"); } catch(e) {}
-      try { tg?.setBackgroundColor("#0e0f12"); } catch(e) {}
-      try { tg?.enableClosingConfirmation(); } catch(e) {}
+  function setStatus(text) {
+    $status.textContent = text;
+  }
 
-      // Тёмная тема по умолчанию
-      try { tg?.setThemeParams({}) } catch(e) {}
+  function setUser(text) {
+    $user.textContent = text;
+  }
 
-      // Отображение пользователя
-      const u = tg?.initDataUnsafe?.user;
-      document.getElementById("userInfo").textContent =
-        u ? `${u.first_name || ""} ${u.last_name || ""} (@${u.username || "-"})` : "unknown";
+  function setDebug(text) {
+    $debug.textContent = text || "";
+  }
 
-      // Покажем сырой initData (для дебага)
-      document.getElementById("initData").textContent = tg?.initData || "(empty)";
+  function run() {
+    // Если открыто не в Telegram — просто подсказка
+    if (!window.Telegram || !window.Telegram.WebApp) {
+      setStatus("Открой через Telegram Mini App");
+      setUser("User: unknown");
+      setDebug("Telegram.WebApp не доступен в обычном браузере.");
+      return;
+    }
 
-      // Кнопки
-      document.getElementById("closeApp").onclick = () => {
-        try { tg.close(); } catch(e) { alert("close not available"); }
-      };
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-      document.getElementById("pingApi").onclick = async () => {
-        try {
-          const r = await fetch("https://api.corsarinc.ru/");
-          const j = await r.json();
-          alert("API: " + JSON.stringify(j));
-        } catch (e) {
-          alert("API error: " + e);
+    const initData = tg.initData || "";
+    if (!initData) {
+      setStatus("Нет initData от Telegram");
+      setDebug("initData пустой. Проверь кнопку web_app в боте.");
+      return;
+    }
+
+    setStatus("Отправляем данные в TrueStake API...");
+    setDebug(initData);
+
+    fetch(API_BASE + "/auth/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ init_data: initData })
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok) {
+          setStatus("Ошибка авторизации");
+          setDebug(JSON.stringify(data, null, 2));
+          return;
         }
-      };
-    </script>
-  </body>
+
+        const u = data.user || {};
+        const label =
+          u.username
+            ? "@" + u.username
+            : (u.first_name || "") + (u.last_name ? " " + u.last_name : "") || u.id;
+
+        setStatus("Авторизовано через Telegram");
+        setUser("User: " + label);
+        setDebug(JSON.stringify(data, null, 2));
+      })
+      .catch((err) => {
+        setStatus("Ошибка API");
+        setDebug(String(err));
+      });
+  }
+
+  run();
+</script>
+</body>
 </html>
