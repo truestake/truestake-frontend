@@ -1,70 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>TrueStake</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>TrueStake · Markets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Стили мини-приложения -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Telegram Mini App JS -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./styles.css">
+
+  <!-- I18N: словари и выбор языка -->
+  <script src="i18n/en.js"></script>
+  <script src="i18n/ru.js"></script>
+  <script src="i18n/index.js"></script>
+
+  <!-- Конфиг с рубриками -->
+  <script src="config/categories.js"></script>
+
+  <!-- Логика интерфейса TrueStake -->
+  <script src="app.js" defer></script>
 </head>
 <body>
-<div class="app">
-  <!-- header -->
-  <div class="header">
-    <div class="brand">
-      <div class="brand-logo"></div>
-      <div class="brand-title">
-        <span data-i18n="brand_name">TrueStake</span>
-        <span data-i18n="brand_tagline">on TON · Telegram Mini App</span>
+  <div class="app-root">
+    <!-- Верхняя панель: логотип + юзер -->
+    <header class="top-bar">
+      <div class="logo">
+        <div class="logo-title" data-i18n="brand_name">TrueStake</div>
+        <div class="logo-sub" data-i18n="brand_tagline">
+          on TON · Telegram Mini App
+        </div>
       </div>
-    </div>
-    <div class="user-pill" id="user-pill">
-      <div class="user-dot"></div>
-      <span id="user-label">guest</span>
-      <span class="role-badge" id="role-badge" style="display:none;"></span>
-    </div>
-  </div>
+      <div class="user-block">
+        <span id="role-badge" class="role-badge" style="display:none;"></span>
+        <span id="user-label" class="user-label">guest</span>
+      </div>
+    </header>
 
-  <!-- categories -->
-  <div class="categories-row" id="categories">
-    <div class="cat-pill active" data-cat="all"        data-i18n="cat_all">All</div>
-    <div class="cat-pill"        data-cat="politics"   data-i18n="cat_politics">Politics</div>
-    <div class="cat-pill"        data-cat="economy"    data-i18n="cat_economy">Economy</div>
-    <div class="cat-pill"        data-cat="crypto"     data-i18n="cat_crypto">Crypto</div>
-    <div class="cat-pill"        data-cat="sports"     data-i18n="cat_sports">Sports</div>
-    <div class="cat-pill"        data-cat="world"      data-i18n="cat_world">World</div>
-    <div class="cat-pill"        data-cat="custom"     data-i18n="cat_other">Other</div>
-  </div>
+    <!-- Поиск + кнопка создать (для creator/admin) -->
+    <section class="controls">
+      <div class="search-row">
+        <input
+          id="search-input"
+          type="search"
+          class="search-input"
+          data-i18n-placeholder="search_placeholder"
+          placeholder="Search markets..."
+        />
+        <button
+          id="create-btn"
+          class="create-btn"
+          style="display:none;"
+          data-i18n="btn_create"
+        >
+          + Create
+        </button>
+      </div>
+      <!-- Рубрики (категории) заполняются динамически из config/categories.js -->
+      <div id="categories" class="categories-row"></div>
+    </section>
 
-  <!-- search + filter -->
-  <div class="search-row">
-    <div class="search-input-wrap">
-      <span class="search-icon">🔍</span>
-      <input id="search-input" placeholder="" data-i18n-placeholder="search_placeholder" />
-    </div>
-    <button class="filter-btn" id="filter-btn">☰</button>
-  </div>
+    <!-- Блок кошелька (TON / USDT), пока заглушка -->
+    <section class="wallet-section">
+      <div id="wallet-box" class="wallet-box"></div>
+    </section>
 
-  <!-- markets list -->
-  <div class="markets-wrap">
-    <div class="markets-list" id="markets-list">
-      <!-- сюда летят карточки -->
-    </div>
-  </div>
+    <!-- Список маркетов -->
+    <main class="markets-wrapper">
+      <div id="markets-list" class="markets-list"></div>
+    </main>
 
-  <!-- footer -->
-  <div class="footer">
-    <div class="footer-left">
-      <div class="f-btn primary" data-i18n="nav_markets">Markets</div>
-      <div class="f-btn" data-i18n="nav_portfolio">Portfolio</div>
-    </div>
-    <div class="footer-right">
-      <button class="create-btn" id="create-btn" data-i18n="btn_create">+ Create</button>
-      <div class="f-btn">☰</div>
-    </div>
+    <!-- Нижняя навигация -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-i18n="nav_markets">Markets</button>
+      <button class="nav-btn" data-i18n="nav_portfolio">Portfolio</button>
+      <button class="nav-btn">⋮</button>
+    </nav>
   </div>
-</div>
-
-<script src="./app.js"></script>
 </body>
 </html>
