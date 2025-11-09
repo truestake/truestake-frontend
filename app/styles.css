@@ -1,52 +1,35 @@
 /* ===========================
-   БАЗА / ФОН
+   БАЗА
    =========================== */
-
-:root {
-  --ts-bg: #f4f8fc;
-  --ts-bg-card: #ffffff;
-  --ts-bg-chip: #eef5ff;
-  --ts-border-soft: #d7e3ff;
-  --ts-text-main: #0f172a;
-  --ts-text-soft: #6b7280;
-  --ts-accent: #00b2ff;
-  --ts-accent-soft: #e0f6ff;
-  --ts-danger: #ff4d6a;
-  --ts-radius-xl: 18px;
-  --ts-shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.08);
-  --ts-font: -apple-system, system-ui, -system-ui, BlinkMacSystemFont, "SF Pro Text",
-    -apple-system, system-ui, sans-serif;
-}
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html,
 body {
-  margin: 0;
-  padding: 0;
   width: 100%;
   height: 100%;
 }
 
 body {
-  font-family: var(--ts-font);
-  background: radial-gradient(circle at top, #fdfefe 0, #f4f8fc 40%, #e7f1ff 100%);
-  color: var(--ts-text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    -system-ui, sans-serif;
+  background: #f5f7fb;
+  color: #111827;
 }
 
-/* Корневой контейнер мини-аппа */
-.ts-app {
-  max-width: 480px; /* комфортно для Mini App */
-  margin: 0 auto;
+.ts-root {
   min-height: 100vh;
-  padding: 10px 10px 6px;
+  max-width: 480px;              /* комфортно в Mini App */
+  margin: 0 auto;
+  padding: 8px 8px 56px;         /* снизу место под bottom-nav */
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 /* ===========================
@@ -55,300 +38,380 @@ body {
 
 .ts-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  margin-bottom: 8px;
 }
 
-.ts-brand {
+.ts-header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .ts-logo {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
-  box-shadow: var(--ts-shadow-soft);
 }
 
-.ts-brand-text {
+.ts-brand-block {
   display: flex;
   flex-direction: column;
+}
+
+.ts-brand-name {
+  font-weight: 700;
+  font-size: 15px;
   line-height: 1.1;
 }
 
-.ts-brand-title {
-  font-size: 15px;
-  font-weight: 700;
+.ts-brand-tagline {
+  font-size: 10px;
+  color: #6b7280;
 }
 
-.ts-brand-sub {
-  font-size: 10px;
-  color: var(--ts-text-soft);
-}
-
-.ts-user {
-  text-align: right;
-  font-size: 10px;
+.ts-header-right {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
+}
+
+.ts-user-label {
+  font-size: 11px;
+  color: #111827;
 }
 
 .ts-role-label {
   font-size: 9px;
   padding: 2px 6px;
   border-radius: 999px;
-  background: var(--ts-accent-soft);
-  color: var(--ts-accent);
-  align-self: flex-end;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+/* цвета ролей */
+.ts-role-label.creator {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.ts-role-label.admin {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 /* ===========================
-   ПОИСК + КАТЕГОРИИ
+   BUTTONS / PILLS
    =========================== */
 
-.ts-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.ts-pill-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 10px;
+  cursor: pointer;
 }
 
-.ts-search {
-  width: 100%;
-  padding: 6px 9px;
+.ts-pill-btn:hover {
+  background: #f3f4ff;
+}
+
+.ts-icon-btn {
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--ts-border-soft);
+  border: none;
+  background: #e5e7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.ts-icon-btn:hover {
+  background: #d1d5ff;
+}
+
+/* ===========================
+   SEARCH
+   =========================== */
+
+.ts-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 2px 6px;
+}
+
+.ts-search-input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
   font-size: 11px;
   outline: none;
-  background-color: #ffffff;
+  background: #ffffff;
 }
 
-.ts-search::placeholder {
-  color: var(--ts-text-soft);
+.ts-search-input::placeholder {
+  color: #9ca3af;
 }
+
+/* ===========================
+   CATEGORIES
+   =========================== */
 
 .ts-categories {
   display: flex;
   flex-wrap: nowrap;
-  gap: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  gap: 4px;
+  padding: 0 2px 4px;
 }
 
-.ts-chip {
-  padding: 4px 9px;
-  font-size: 9px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: var(--ts-bg-chip);
-  color: var(--ts-text-soft);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.ts-chip-active {
-  background: var(--ts-accent);
-  color: #ffffff;
-}
-
-/* ===========================
-   WALLET + TABS
-   =========================== */
-
-.ts-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.ts-asset-title {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.ts-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.ts-btn-outline {
-  background: transparent;
-  border: 1px solid var(--ts-accent);
-  color: var(--ts-accent);
-}
-
-.ts-btn-outline:hover {
-  background: var(--ts-accent-soft);
-}
-
-.ts-btn-primary {
-  background: var(--ts-accent);
-  color: #ffffff;
-}
-
-.ts-btn-primary:hover {
-  box-shadow: var(--ts-shadow-soft);
-}
-
-.ts-tabs {
-  display: flex;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.ts-tab {
-  flex: 0 0 auto;
+.ts-category-pill {
+  flex-shrink: 0;
   padding: 4px 10px;
   border-radius: 999px;
   border: none;
-  background: #e5edff;
-  font-size: 9px;
-  color: var(--ts-text-soft);
+  background: #eef2ff;
+  color: #4b5563;
+  font-size: 10px;
   cursor: pointer;
 }
 
-.ts-tab-active {
-  background: var(--ts-accent);
+.ts-category-pill.active {
+  background: #22c1f1;
   color: #ffffff;
 }
 
 /* ===========================
-   CREATOR / ADMIN ACTIONS
+   FILTERS BAR
    =========================== */
 
-.ts-actions {
+.ts-filters-bar {
+  display: flex;
+  gap: 4px;
+  padding: 2px 2px 4px;
+  font-size: 9px;
+}
+
+.ts-filter-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #f3f4ff;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.ts-filter-chip-active,
+.ts-filter-chip:hover {
+  background: #22c1f1;
+  color: #ffffff;
+}
+
+/* ===========================
+   RATE + WALLET
+   =========================== */
+
+.ts-rate-wallet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  margin: 4px 0 6px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(148, 163, 253, 0.12);
+  font-size: 10px;
+}
+
+.ts-rate-label {
+  font-weight: 500;
+}
+
+.ts-rate-value {
+  margin-left: 4px;
+  color: #22c1f1;
+}
+
+.ts-wallet-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #22c1f1;
+  background: #f0f9ff;
+  font-size: 10px;
+  color: #0369a1;
+  cursor: pointer;
+}
+
+/* ===========================
+   ROLE ACTIONS
+   =========================== */
+
+.ts-role-actions {
   display: flex;
   gap: 6px;
-  margin-top: 2px;
+  margin: 2px 0 4px;
+}
+
+.ts-role-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 9px;
+  cursor: pointer;
+  background: #22c1f1;
+  color: #ffffff;
+}
+
+.ts-role-btn.secondary {
+  background: #e5e7ff;
+  color: #374151;
 }
 
 /* ===========================
    MARKETS LIST + CARDS
    =========================== */
 
-.ts-markets {
+.ts-markets-list {
+  flex: 1;
   margin-top: 4px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
   overflow-y: auto;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
 }
 
-.ts-card {
-  background: var(--ts-bg-card);
-  border-radius: var(--ts-radius-xl);
-  padding: 8px 9px 7px;
-  box-shadow: var(--ts-shadow-soft);
-  border: 1px solid var(--ts-border-soft);
+.ts-market-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 40px 1fr 80px;
   grid-template-rows: auto auto auto;
-  grid-template-areas:
-    "title title"
-    "stats stats"
-    "meta meta";
-  row-gap: 4px;
   column-gap: 8px;
+  row-gap: 2px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(148, 163, 253, 0.14);
+  font-size: 10px;
 }
 
-/* Заголовок вопроса */
-.ts-card-title {
-  grid-area: title;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ts-text-main);
-}
-
-/* YES / NO / PROBABILITY */
-.ts-card-stats {
-  grid-area: stats;
+.ts-market-icon {
+  grid-row: 1 / span 3;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #eff6ff;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  justify-content: center;
+  font-size: 16px;
 }
 
-.ts-yes,
-.ts-no {
-  padding: 5px 14px;
+.ts-market-question {
+  font-weight: 600;
+  color: #111827;
+}
+
+.ts-market-meta {
+  color: #6b7280;
+  font-size: 9px;
+}
+
+.ts-market-vol {
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.ts-market-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-end;
+}
+
+.ts-yes-btn,
+.ts-no-btn {
+  min-width: 52px;
+  padding: 4px 6px;
   border-radius: 999px;
-  font-weight: 700;
-  font-size: 10px;
   border: none;
+  font-size: 9px;
   cursor: pointer;
 }
 
-.ts-yes {
-  background: #00c7ff;
+.ts-yes-btn {
+  background: #22c1f1;
   color: #ffffff;
 }
 
-.ts-no {
-  background: #ffffff;
-  border: 1px solid #ff4d6a;
-  color: #ff4d6a;
+.ts-no-btn {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
-.ts-prob {
-  display: inline-flex;
+.ts-market-prob {
+  font-size: 9px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ===========================
+   BOTTOM NAV
+   =========================== */
+
+.ts-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 480px;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  background: #ffffff;
+  box-shadow: 0 -4px 12px rgba(148, 163, 253, 0.16);
+  z-index: 50;
+}
+
+.ts-bottom-nav-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 10px;
+  color: #9ca3af;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  background: #1f2937;
-  color: #ffffff;
-  font-size: 11px;
-  flex-shrink: 0;
+  cursor: pointer;
 }
 
-/* Объём и статус */
-.ts-card-meta {
-  grid-area: meta;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 9px;
-  color: var(--ts-text-soft);
+.ts-bottom-nav-btn-active {
+  color: #22c1f1;
+  font-weight: 600;
 }
 
 /* ===========================
-   PORTFOLIO / EMPTY
+   DEBUG
    =========================== */
 
-.ts-hidden {
-  display: none !important;
-}
-
-.ts-portfolio {
-  flex: 1;
-  display: none;
-}
-
-.ts-empty {
-  font-size: 10px;
-  padding: 10px;
-  color: var(--ts-text-soft);
-}
-
-/* ===========================
-   FOOTER
-   =========================== */
-
-.ts-footer {
-  padding-top: 4px;
-  font-size: 9px;
-  color: var(--ts-text-soft);
-  text-align: center;
+.ts-debug {
+  display: none; /* включим, если нужно логировать JSON */
+  margin-top: 6px;
+  font-size: 8px;
+  color: #9ca3af;
+  word-break: break-all;
 }
