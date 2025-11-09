@@ -1,82 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>TrueStake · Markets</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Стили мини-приложения -->
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- Telegram Mini App JS -->
+  <meta charset="utf-8" />
+  <title>TrueStake · TON Mini App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- I18N: словари и выбор языка -->
-  <script src="i18n/en.js"></script>
-  <script src="i18n/ru.js"></script>
-  <script src="i18n/index.js"></script>
-
-  <!-- Конфиг с рубриками -->
-  <script src="config/categories.js"></script>
-
-  <!-- Логика интерфейса TrueStake -->
-  <script src="app.js" defer></script>
+  <!-- Стили -->
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="app-root">
-    <!-- Верхняя панель: логотип + юзер -->
-    <header class="top-bar">
-      <div class="logo">
-        <div class="logo-title" data-i18n="brand_name">TrueStake</div>
-        <div class="logo-sub" data-i18n="brand_tagline">
-          on TON · Telegram Mini App
+  <div id="app-root" class="ts-app">
+    <!-- HEADER -->
+    <header class="ts-header">
+      <div class="ts-brand">
+        <!-- Логотип слева -->
+        <img src="./assets/logo.png" alt="TrueStake" class="ts-logo" />
+        <div class="ts-brand-text">
+          <div class="ts-brand-title" data-i18n="brand_name">TrueStake</div>
+          <div class="ts-brand-sub" data-i18n="brand_tagline">on TON · Telegram Mini App</div>
         </div>
       </div>
-      <div class="user-block">
-        <span id="role-badge" class="role-badge" style="display:none;"></span>
-        <span id="user-label" class="user-label">guest</span>
+      <div class="ts-user">
+        <span id="ts-user-label"></span>
+        <span id="ts-role-label" class="ts-role-label"></span>
       </div>
     </header>
 
-    <!-- Поиск + кнопка создать (для creator/admin) -->
-    <section class="controls">
-      <div class="search-row">
-        <input
-          id="search-input"
-          type="search"
-          class="search-input"
-          data-i18n-placeholder="search_placeholder"
-          placeholder="Search markets..."
-        />
-        <button
-          id="create-btn"
-          class="create-btn"
-          style="display:none;"
-          data-i18n="btn_create"
-        >
-          + Create
-        </button>
+    <!-- SEARCH + CATEGORIES -->
+    <section class="ts-filters">
+      <input
+        id="ts-search"
+        class="ts-search"
+        type="text"
+        data-i18n-placeholder="search_placeholder"
+        placeholder="Search markets..."
+      />
+
+      <div id="ts-categories" class="ts-categories">
+        <!-- Категории рендерятся из JS по config/categories.js -->
       </div>
-      <!-- Рубрики (категории) заполняются динамически из config/categories.js -->
-      <div id="categories" class="categories-row"></div>
     </section>
 
-    <!-- Блок кошелька (TON / USDT), пока заглушка -->
-    <section class="wallet-section">
-      <div id="wallet-box" class="wallet-box"></div>
+    <!-- WALLET + MAIN TABS -->
+    <section class="ts-topbar">
+      <div class="ts-asset-label">
+        <span class="ts-asset-title" data-i18n="ton_usdt">TON / USDT</span>
+      </div>
+      <button id="ts-connect-wallet" class="ts-btn ts-btn-outline" data-i18n="connect_wallet">
+        Connect TON wallet
+      </button>
     </section>
 
-    <!-- Список маркетов -->
-    <main class="markets-wrapper">
-      <div id="markets-list" class="markets-list"></div>
+    <nav class="ts-tabs">
+      <button id="ts-tab-markets" class="ts-tab ts-tab-active" data-i18n="tab_markets">Markets</button>
+      <button id="ts-tab-portfolio" class="ts-tab" data-i18n="tab_portfolio">Portfolio</button>
+      <button id="ts-tab-more" class="ts-tab">⋯</button>
+    </nav>
+
+    <!-- CREATOR / ADMIN ACTIONS -->
+    <section id="ts-actions" class="ts-actions">
+      <!-- Для creator/admin JS сюда подставит:
+           - кнопку "Создать событие" / "Create market"
+           - для admin — ссылку на модерацию -->
+    </section>
+
+    <!-- MARKETS LIST -->
+    <main id="ts-markets" class="ts-markets">
+      <!-- Карточки рынков рендерятся в app.js -->
     </main>
 
-    <!-- Нижняя навигация -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-i18n="nav_markets">Markets</button>
-      <button class="nav-btn" data-i18n="nav_portfolio">Portfolio</button>
-      <button class="nav-btn">⋮</button>
-    </nav>
+    <!-- PORTFOLIO PLACEHOLDER -->
+    <section id="ts-portfolio" class="ts-portfolio ts-hidden">
+      <div class="ts-empty" data-i18n="portfolio_soon">
+        Portfolio view will be available soon.
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="ts-footer">
+      <span>@truestake_bot</span>
+    </footer>
   </div>
+
+  <!-- I18N -->
+  <script src="./i18n/en.js"></script>
+  <script src="./i18n/ru.js"></script>
+  <script src="./i18n/index.js"></script>
+
+  <!-- CONFIG -->
+  <script src="./config/categories.js"></script>
+
+  <!-- APP LOGIC -->
+  <script src="./app.js"></script>
 </body>
 </html>

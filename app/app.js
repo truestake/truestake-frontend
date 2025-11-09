@@ -1,278 +1,313 @@
-// ===============================
+// ======================================================
+// TrueStake Mini App — фронтовая логика
+// Все ключевые части прокомментированы на русском.
+// ======================================================
+
+// ----------------------
 // Глобальное состояние
-// ===============================
+// ----------------------
 const state = {
-  lang: "en",          // язык интерфейса
-  dict: {},            // ссылки на текущий словарь
-  token: null,         // JWT
+  lang: "en",          // текущий язык интерфейса
+  dict: I18N_EN,       // активный словарь
+  token: null,         // JWT от backend
   user: null,          // { id, username, role }
   markets: [],         // список рынков
-  category: "all",     // активная категория
-  search: "",          // строка поиска
-  wallet: {
-    connected: false,
-    address: null,
-    balance: null,     // сюда позже подтянем с бэка/TON
-  },
+  category: "all",     // выбранная категория
+  tab: "markets",      // активная вкладка
 };
 
-// ===============================
-// I18N helpers
-// ===============================
-function initLang() {
-  const i18n = window.TRUESTAKE_I18N;
-  state.lang = i18n.getLangCode();
-  state.dict = i18n.getDict(state.lang);
+// ----------------------
+// Утилита: выбрать язык
+// Берём из Telegram WebApp user.language_code,
+// если ru -> ru, иначе -> en.
+// ----------------------
+function detectLang(tgUser) {
+  const code =
+    (tgUser && tgUser.language_code) ||
+    (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) ||
+    "en";
+
+  if (code.startsWith("ru")) return "ru";
+  return "en";
 }
 
-function t(key) {
-  return state.dict[key] || key;
-}
+// ----------------------
+// Применить словарь к DOM
+// ----------------------
+function applyI18n() {
+  const dict = state.dict;
 
-function applyTranslationsStatic() {
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const key = el.getAttribute("data-i18n");
-    el.textContent = t(key);
-  });
+  // Текстовые ноды
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      if (dict[key]) el.textContent = dict[key];
+    });
+
+  // Плейсхолдеры для input
   document
     .querySelectorAll("[data-i18n-placeholder]")
     .forEach((el) => {
       const key = el.getAttribute("data-i18n-placeholder");
-      el.placeholder = t(key);
+      if (dict[key]) el.placeholder = dict[key];
     });
 }
 
-// ===============================
-// Категории
-// ===============================
-function renderCategories() {
-  const bar = document.getElementById("categories");
-  if (!bar || !window.TRUESTAKE_CATEGORIES) return;
-
-  bar.innerHTML = "";
-
-  window.TRUESTAKE_CATEGORIES
-    .filter((c) => c.enabled)
-    .forEach((c, idx) => {
-      const span = document.createElement("span");
-      span.className = "cat-pill";
-      span.dataset.cat = c.id;
-      span.textContent = t(c.i18nKey);
-      if (idx === 0) {
-        span.classList.add("active");
-        state.category = c.id;
-      }
-      span.addEventListener("click", () => {
-        document
-          .querySelectorAll(".cat-pill")
-          .forEach((el) => el.classList.remove("active"));
-        span.classList.add("active");
-        state.category = c.id;
-        renderMarkets();
-      });
-      bar.appendChild(span);
-    });
-}
-
-// ===============================
-// Пользователь и роль
-// ===============================
-function setUserInfo() {
-  const el = document.getElementById("user-label");
-  const roleEl = document.getElementById("role-badge");
-  const createBtn = document.getElementById("create-btn");
-
-  if (!el) return;
+// ----------------------
+// Рендер информации о юзере и роли
+// ----------------------
+function renderUserInfo() {
+  const userEl = document.getElementById("ts-user-label");
+  const roleEl = document.getElementById("ts-role-label");
 
   if (!state.user) {
-    el.textContent = "guest";
-    if (roleEl) roleEl.style.display = "none";
-    if (createBtn) createBtn.style.display = "none";
+    userEl.textContent = "guest";
+    roleEl.textContent = "";
+    roleEl.style.display = "none";
     return;
   }
 
-  el.textContent = state.user.username
-    ? "@" + state.user.username
-    : String(state.user.id || "user");
+  userEl.textContent = `@${state.user.username || state.user.id}`;
+
+  const role = state.user.role || "user";
+  if (role === "admin") {
+    roleEl.textContent = "admin";
+    roleEl.style.display = "inline-flex";
+  } else if (role === "creator") {
+    roleEl.textContent = "creator";
+    roleEl.style.display = "inline-flex";
+  } else {
+    roleEl.textContent = "";
+    roleEl.style.display = "none";
+  }
+}
+
+// ----------------------
+// Рендер категорий из config/categories.js
+// ----------------------
+function renderCategories() {
+  const wrap = document.getElementById("ts-categories");
+  wrap.innerHTML = "";
+
+  (window.TRUESTAKE_CATEGORIES || []).forEach((cat) => {
+    if (!cat.enabled) return;
+    const span = document.createElement("button");
+    span.className =
+      "ts-chip" + (state.category === cat.id ? " ts-chip-active" : "");
+    span.textContent = state.dict[cat.i18nKey] || cat.id;
+    span.onclick = () => {
+      state.category = cat.id;
+      renderCategories();
+      renderMarkets();
+    };
+    wrap.appendChild(span);
+  });
+}
+
+// ----------------------
+// Рендер кнопок для creator / admin
+// ----------------------
+function renderActions() {
+  const box = document.getElementById("ts-actions");
+  box.innerHTML = "";
+
+  if (!state.user) return;
 
   const role = state.user.role || "user";
 
-  if (role === "admin" || role === "creator") {
-    if (roleEl) {
-      roleEl.textContent = role.toUpperCase();
-      roleEl.style.display = "inline-block";
-    }
-    if (createBtn) createBtn.style.display = "inline-block";
-  } else {
-    if (roleEl) roleEl.style.display = "none";
-    if (createBtn) createBtn.style.display = "none";
+  // Кнопка для creator + admin
+  if (role === "creator" || role === "admin") {
+    const btnCreate = document.createElement("button");
+    btnCreate.className = "ts-btn ts-btn-primary";
+    btnCreate.textContent =
+      role === "admin"
+        ? (state.dict.btn_create_market_admin || "Create market")
+        : (state.dict.btn_create_market || "Create market");
+    btnCreate.onclick = () => {
+      alert("Форма создания рынка появится тут (MVP next step).");
+    };
+    box.appendChild(btnCreate);
+  }
+
+  // Доп. кнопка только для admin
+  if (role === "admin") {
+    const btnMod = document.createElement("button");
+    btnMod.className = "ts-btn ts-btn-outline";
+    btnMod.textContent = state.dict.btn_admin_panel || "Admin";
+    btnMod.onclick = () => {
+      alert("Админ-модерация рынков (activate/resolve) будет здесь.");
+    };
+    box.appendChild(btnMod);
   }
 }
 
-// ===============================
-// Кошелёк (UI-заглушка, логика TON будет позже)
-// ===============================
-function renderWallet() {
-  const box = document.getElementById("wallet-box");
-  if (!box) return;
-
-  box.innerHTML = "";
-
-  const title = document.createElement("div");
-  title.className = "wallet-title";
-  title.textContent = "TON / USDT";
-
-  const status = document.createElement("div");
-  status.className = "wallet-status";
-
-  if (!state.wallet.connected) {
-    status.textContent = t("wallet_connect");
-  } else {
-    status.textContent =
-      t("wallet_connected") +
-      (state.wallet.address ? ` (${state.wallet.address.slice(0, 8)}...)` : "");
-  }
-
-  const btn = document.createElement("button");
-  btn.className = "wallet-btn";
-  btn.textContent = state.wallet.connected
-    ? t("wallet_balance")
-    : t("wallet_connect");
-
-  btn.addEventListener("click", () => {
-    // Здесь позже интегрируем TonConnect SDK.
-    // Пока заглушка.
-    const tg = window.Telegram && window.Telegram.WebApp;
-    const msg =
-      state.lang === "ru"
-        ? "Подключение TON-кошелька будет реализовано через TonConnect."
-        : "TON wallet connection will be implemented via TonConnect.";
-    if (tg?.showAlert) tg.showAlert(msg);
-    else alert(msg);
-  });
-
-  box.appendChild(title);
-  box.appendChild(status);
-  box.appendChild(btn);
-}
-
-// ===============================
-// Рендер маркетов
-// ===============================
+// ----------------------
+// Рендер списка рынков
+// ----------------------
 function renderMarkets() {
-  const list = document.getElementById("markets-list");
-  if (!list) return;
+  const root = document.getElementById("ts-markets");
+  root.innerHTML = "";
 
-  list.innerHTML = "";
+  const q = document.getElementById("ts-search").value.trim().toLowerCase();
+  const cat = state.category;
 
   let items = state.markets || [];
 
-  if (state.category && state.category !== "all") {
-    items = items.filter((m) => (m.category || "") === state.category);
+  if (cat && cat !== "all") {
+    items = items.filter((m) => (m.category || "other") === cat);
   }
 
-  if (state.search) {
-    const q = state.search.toLowerCase();
+  if (q) {
     items = items.filter((m) =>
       (m.question || "").toLowerCase().includes(q)
     );
   }
 
   if (!items.length) {
-    const div = document.createElement("div");
-    div.className = "empty";
-    div.textContent = t("no_markets");
-    list.appendChild(div);
+    const empty = document.createElement("div");
+    empty.className = "ts-empty";
+    empty.textContent =
+      state.dict.no_markets || "No markets yet. Creators will add markets soon.";
+    root.appendChild(empty);
     return;
   }
 
   items.forEach((m) => {
     const card = document.createElement("div");
-    card.className = "market-card";
+    card.className = "ts-card";
 
-    const left = document.createElement("div");
-    left.className = "market-main";
+    // Вопрос
+    const title = document.createElement("div");
+    title.className = "ts-card-title";
+    title.textContent = m.question;
+    card.appendChild(title);
 
-    const q = document.createElement("div");
-    q.className = "market-question";
-    q.textContent = m.question || "";
-    left.appendChild(q);
+    // Блок YES / probability / NO
+    const stats = document.createElement("div");
+    stats.className = "ts-card-stats";
 
+    const btnYes = document.createElement("button");
+    btnYes.className = "ts-yes";
+    btnYes.textContent = "YES";
+    btnYes.onclick = () => {
+      alert("MVP: buy YES (логика покупки будет позже).");
+    };
+
+    const prob = document.createElement("div");
+    prob.className = "ts-prob";
+    const p = Math.round((m.prob_yes ?? 50) || 50);
+    prob.textContent = p + "%";
+
+    const btnNo = document.createElement("button");
+    btnNo.className = "ts-no";
+    btnNo.textContent = "NO";
+    btnNo.onclick = () => {
+      alert("MVP: buy NO (логика покупки будет позже).");
+    };
+
+    stats.appendChild(btnYes);
+    stats.appendChild(prob);
+    stats.appendChild(btnNo);
+
+    card.appendChild(stats);
+
+    // Метрика снизу: объем + статус
     const meta = document.createElement("div");
-    meta.className = "market-meta";
-
-    const cat = document.createElement("span");
-    cat.className = "meta-pill";
-    cat.textContent = (m.category || "global").toUpperCase();
-    meta.appendChild(cat);
-
-    if (m.resolution_ts) {
-      const dt = document.createElement("span");
-      dt.textContent = m.resolution_ts.slice(0, 10);
-      meta.appendChild(dt);
-    }
-
-    const st = document.createElement("span");
-    st.className = "status-badge";
-    const status = (m.status || "active").toLowerCase();
-    if (status === "pending") st.textContent = t("status_pending");
-    else if (status === "resolved") st.textContent = t("status_resolved");
-    else st.textContent = t("status_active");
-    meta.appendChild(st);
-
-    left.appendChild(meta);
-
-    const right = document.createElement("div");
-    right.className = "market-right";
-
-    const yesLabel = document.createElement("div");
-    yesLabel.className = "yes-label";
-    yesLabel.textContent = t("yes_label");
-    right.appendChild(yesLabel);
-
-    const yesVal = document.createElement("div");
-    yesVal.className = "yes-value";
-    const p = m.prob_yes ?? m.probability_yes ?? 50;
-    yesVal.textContent = p.toFixed(0) + "%";
-    right.appendChild(yesVal);
+    meta.className = "ts-card-meta";
 
     const vol = document.createElement("div");
-    vol.className = "vol";
-    vol.textContent = t("vol_prefix") + (m.volume_usd || 0).toFixed(0);
-    right.appendChild(vol);
+    const v = m.volume_usd || 0;
+    vol.textContent = `$${v.toLocaleString("en-US")} Vol.`;
 
-    card.appendChild(left);
-    card.appendChild(right);
-    list.appendChild(card);
+    const status = document.createElement("div");
+    status.textContent = m.status || "pending";
+
+    meta.appendChild(vol);
+    meta.appendChild(status);
+    card.appendChild(meta);
+
+    root.appendChild(card);
   });
 }
 
-// ===============================
-// Загрузка рынков с API
-// ===============================
+// ----------------------
+// Переключение табов
+// ----------------------
+function setupTabs() {
+  const tabMarkets = document.getElementById("ts-tab-markets");
+  const tabPortfolio = document.getElementById("ts-tab-portfolio");
+  const tabMore = document.getElementById("ts-tab-more");
+
+  const sectionMarkets = document.getElementById("ts-markets");
+  const sectionPortfolio = document.getElementById("ts-portfolio");
+
+  function setTab(name) {
+    state.tab = name;
+
+    tabMarkets.classList.toggle("ts-tab-active", name === "markets");
+    tabPortfolio.classList.toggle("ts-tab-active", name === "portfolio");
+
+    if (name === "markets") {
+      sectionMarkets.classList.remove("ts-hidden");
+      sectionPortfolio.classList.add("ts-hidden");
+    } else {
+      sectionMarkets.classList.add("ts-hidden");
+      sectionPortfolio.classList.remove("ts-hidden");
+    }
+  }
+
+  tabMarkets.onclick = () => setTab("markets");
+  tabPortfolio.onclick = () => setTab("portfolio");
+  tabMore.onclick = () => {
+    alert("More / Settings / Docs — добавим позже.");
+  };
+
+  setTab("markets");
+}
+
+// ----------------------
+// Загрузка рынков с backend
+// ----------------------
 async function loadMarkets() {
   try {
-    const res = await fetch("https://api.corsarinc.ru/markets?status=active");
+    const res = await fetch("https://api.corsarinc.ru/markets", {
+      method: "GET",
+      credentials: "omit",
+    });
     const data = await res.json();
-    if (data.ok && Array.isArray(data.markets)) {
-      state.markets = data.markets;
+    if (data && data.ok) {
+      state.markets = data.markets || [];
       renderMarkets();
+    } else {
+      console.warn("markets load fail", data);
     }
   } catch (e) {
-    console.log("loadMarkets error", e);
+    console.error("markets error", e);
   }
 }
 
-// ===============================
+// ----------------------
 // Авторизация через Telegram WebApp
-// ===============================
-async function authTelegram() {
+// 1. Берём initData
+// 2. Отправляем на /auth/telegram
+// 3. Сохраняем token + user (+role)
+// ----------------------
+async function initAuth() {
   const tg = window.Telegram?.WebApp;
 
-  if (!tg || !tg.initData) {
-    // Открыто в браузере — без авторизации
+  const initData = tg?.initData || "";
+  const isInTelegram = !!tg && !!initData;
+
+  // Если не в Telegram (открыли в браузере)
+  if (!isInTelegram) {
     state.user = null;
-    setUserInfo();
+    state.token = null;
+    state.lang = "en";
+    state.dict = I18N_EN;
+    applyI18n();
+    renderUserInfo();
+    renderActions();
     return;
   }
 
@@ -280,77 +315,49 @@ async function authTelegram() {
     const res = await fetch("https://api.corsarinc.ru/auth/telegram", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init_data: tg.initData }),
+      body: JSON.stringify({ init_data: initData }),
     });
+
     const data = await res.json();
 
-    if (data.ok && data.token && data.user) {
-      state.token = data.token;
-      state.user = data.user;
+    if (!data.ok) {
+      console.warn("auth failed", data);
+      state.user = null;
+      state.token = null;
+      state.lang = "en";
+      state.dict = I18N_EN;
+    } else {
+      state.user = data.user || null;
+      state.token = data.token || null;
 
-      // Дотягиваем роль
-      try {
-        const meRes = await fetch("https://api.corsarinc.ru/auth/me", {
-          headers: { Authorization: "Bearer " + state.token },
-        });
-        const me = await meRes.json();
-        if (me.ok && me.user) state.user = me.user;
-      } catch (e) {
-        console.log("auth/me error", e);
-      }
+      // язык по Telegram
+      const lang = detectLang(state.user);
+      state.lang = lang;
+      state.dict = lang === "ru" ? I18N_RU : I18N_EN;
     }
   } catch (e) {
-    console.log("authTelegram error", e);
+    console.error("auth error", e);
+    state.user = null;
+    state.token = null;
+    state.lang = "en";
+    state.dict = I18N_EN;
   }
 
-  setUserInfo();
+  applyI18n();
+  renderUserInfo();
+  renderActions();
 }
 
-// ===============================
-// UI события
-// ===============================
-function setupUI() {
-  const searchInput = document.getElementById("search-input");
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      state.search = e.target.value.trim();
-      renderMarkets();
-    });
-  }
+// ----------------------
+// Инициализация
+// ----------------------
+window.addEventListener("DOMContentLoaded", async () => {
+  // Подписываем обработчик поиска
+  const searchInput = document.getElementById("ts-search");
+  searchInput.addEventListener("input", () => renderMarkets());
 
-  const createBtn = document.getElementById("create-btn");
-  if (createBtn) {
-    createBtn.addEventListener("click", () => {
-      const tg = window.Telegram?.WebApp;
-      const msg =
-        state.lang === "ru"
-          ? "Здесь будет интерфейс создания события для креаторов."
-          : "Creator event creation UI will appear here.";
-      if (tg?.showAlert) tg.showAlert(msg);
-      else alert(msg);
-    });
-  }
-}
-
-// ===============================
-// Entry point
-// ===============================
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.expand();
-      tg.setBackgroundColor("#050816");
-      tg.setHeaderColor("#050816");
-    }
-  } catch (e) {}
-
-  initLang();
-  applyTranslationsStatic();
-  renderCategories();
-  setupUI();
-  renderWallet();
-
-  await authTelegram();
-  await loadMarkets();
+  await initAuth();      // авторизация + язык + роли
+  renderCategories();    // категории
+  setupTabs();           // табы
+  await loadMarkets();   // рынки
 });
