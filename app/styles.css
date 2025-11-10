@@ -1,7 +1,3 @@
-/* ===========================
-   БАЗА
-   =========================== */
-
 *,
 *::before,
 *::after {
@@ -25,16 +21,14 @@ body {
 
 .ts-root {
   min-height: 100vh;
-  max-width: 480px;              /* комфортно в Mini App */
+  max-width: 480px;
   margin: 0 auto;
-  padding: 8px 8px 56px;         /* снизу место под bottom-nav */
+  padding: 8px 8px 56px;
   display: flex;
   flex-direction: column;
 }
 
-/* ===========================
-   HEADER
-   =========================== */
+/* HEADER */
 
 .ts-header {
   display: flex;
@@ -75,10 +69,68 @@ body {
   color: #6b7280;
 }
 
+/* LANG SWITCHER */
+
+.ts-lang-wrap {
+  position: relative;
+  margin-left: 6px;
+}
+
+.ts-lang-btn {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ts-lang-menu {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  min-width: 80px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  font-size: 10px;
+  padding: 4px 0;
+  display: none;
+  z-index: 20;
+}
+
+.ts-lang-menu div {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.ts-lang-menu div:hover {
+  background: #f3f4ff;
+}
+
+/* HEADER RIGHT */
+
 .ts-header-right {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.ts-wallet-btn-small {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #22c1f1;
+  background: #f0f9ff;
+  font-size: 9px;
+  color: #0369a1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ts-user-label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .ts-user-label {
@@ -87,7 +139,7 @@ body {
 }
 
 .ts-role-label {
-  font-size: 9px;
+  font-size: 8px;
   padding: 2px 6px;
   border-radius: 999px;
   text-transform: uppercase;
@@ -96,7 +148,6 @@ body {
   color: #4b5563;
 }
 
-/* цвета ролей */
 .ts-role-label.creator {
   background: #e0f2fe;
   color: #0369a1;
@@ -107,21 +158,27 @@ body {
   color: #b91c1c;
 }
 
-/* ===========================
-   BUTTONS / PILLS
-   =========================== */
+/* SEARCH */
 
-.ts-pill-btn {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  font-size: 10px;
-  cursor: pointer;
+.ts-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 2px 4px;
 }
 
-.ts-pill-btn:hover {
-  background: #f3f4ff;
+.ts-search-input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  font-size: 11px;
+  outline: none;
+  background: #ffffff;
+}
+
+.ts-search-input::placeholder {
+  color: #9ca3af;
 }
 
 .ts-icon-btn {
@@ -141,34 +198,7 @@ body {
   background: #d1d5ff;
 }
 
-/* ===========================
-   SEARCH
-   =========================== */
-
-.ts-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 2px 6px;
-}
-
-.ts-search-input {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  font-size: 11px;
-  outline: none;
-  background: #ffffff;
-}
-
-.ts-search-input::placeholder {
-  color: #9ca3af;
-}
-
-/* ===========================
-   CATEGORIES
-   =========================== */
+/* CATEGORIES */
 
 .ts-categories {
   display: flex;
@@ -194,14 +224,12 @@ body {
   color: #ffffff;
 }
 
-/* ===========================
-   FILTERS BAR
-   =========================== */
+/* STATUS FILTERS */
 
 .ts-filters-bar {
   display: flex;
   gap: 4px;
-  padding: 2px 2px 4px;
+  padding: 0 2px 4px;
   font-size: 9px;
 }
 
@@ -220,16 +248,14 @@ body {
   color: #ffffff;
 }
 
-/* ===========================
-   RATE + WALLET
-   =========================== */
+/* RATE + WALLET LINE */
 
 .ts-rate-wallet {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  margin: 4px 0 6px;
+  margin: 2px 0 6px;
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(148, 163, 253, 0.12);
@@ -241,28 +267,20 @@ body {
 }
 
 .ts-rate-value {
-  margin-left: 4px;
   color: #22c1f1;
 }
 
-.ts-wallet-btn {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid #22c1f1;
-  background: #f0f9ff;
-  font-size: 10px;
-  color: #0369a1;
-  cursor: pointer;
+.ts-rate-extra {
+  font-size: 9px;
+  color: #9ca3af;
 }
 
-/* ===========================
-   ROLE ACTIONS
-   =========================== */
+/* ROLE ACTIONS */
 
 .ts-role-actions {
   display: flex;
   gap: 6px;
-  margin: 2px 0 4px;
+  margin: 0 0 4px;
 }
 
 .ts-role-btn {
@@ -280,9 +298,7 @@ body {
   color: #374151;
 }
 
-/* ===========================
-   MARKETS LIST + CARDS
-   =========================== */
+/* MARKETS LIST */
 
 .ts-markets-list {
   flex: 1;
@@ -293,6 +309,8 @@ body {
   overflow-y: auto;
   padding-bottom: 8px;
 }
+
+/* MARKET CARD */
 
 .ts-market-card {
   display: grid;
@@ -364,14 +382,55 @@ body {
 .ts-market-prob {
   font-size: 9px;
   color: #6b7280;
-  display: flex;
-  align-items: center;
-  gap: 3px;
 }
 
-/* ===========================
-   BOTTOM NAV
-   =========================== */
+/* SKELETONS */
+
+.ts-market-card.skeleton {
+  box-shadow: none;
+  background: #f3f4ff;
+  position: relative;
+  overflow: hidden;
+}
+
+.ts-skel-line {
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7ff;
+  margin-bottom: 4px;
+}
+
+.ts-skel-pill {
+  width: 40px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7ff;
+  margin-top: 2px;
+}
+
+.ts-market-card.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: ts-skel-shine 1.2s infinite;
+}
+
+@keyframes ts-skel-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* BOTTOM NAV */
 
 .ts-bottom-nav {
   position: fixed;
@@ -404,13 +463,10 @@ body {
   font-weight: 600;
 }
 
-/* ===========================
-   DEBUG
-   =========================== */
+/* DEBUG (НЕ ПОКАЗЫВАЕМ) */
 
 .ts-debug {
-  display: none; /* включим, если нужно логировать JSON */
-  margin-top: 6px;
+  display: none;
   font-size: 8px;
   color: #9ca3af;
   word-break: break-all;

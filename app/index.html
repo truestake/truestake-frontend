@@ -4,26 +4,16 @@
     <meta charset="UTF-8" />
     <title>TrueStake · Prediction Markets on TON</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <!-- Основные стили -->
     <link rel="stylesheet" href="./styles.css" />
-    <!-- Telegram Mini App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- I18N словари -->
     <script src="./i18n/en.js"></script>
     <script src="./i18n/ru.js"></script>
     <script src="./i18n/index.js"></script>
-    <!-- Конфиг категорий -->
     <script src="./config/categories.js"></script>
 </head>
 <body>
 <div id="root" class="ts-root">
-    <!--
-      ВНИМАНИЕ:
-      Вся разметка дальше управляется через app.js.
-      Здесь только "скелет", без жёстко зашитого текста.
-    -->
-
-    <!-- Верхняя панель: логотип, бренд, язык, пользователь, кошелёк -->
+    <!-- HEADER -->
     <header class="ts-header">
         <div class="ts-header-left">
             <img src="./assets/logo.png" alt="TrueStake" class="ts-logo">
@@ -31,54 +21,58 @@
                 <div class="ts-brand-name" id="ts-brand-name">TrueStake</div>
                 <div class="ts-brand-tagline" id="ts-brand-tagline">on TON · Telegram Mini App</div>
             </div>
+            <div class="ts-lang-wrap">
+                <button id="ts-lang-current" class="ts-lang-btn">🇺🇸</button>
+                <div id="ts-lang-menu" class="ts-lang-menu">
+                    <div data-lang="en">🇺🇸 EN</div>
+                    <div data-lang="ru">🇷🇺 RU</div>
+                </div>
+            </div>
         </div>
         <div class="ts-header-right">
-            <button id="ts-lang-toggle" class="ts-pill-btn">EN</button>
-            <div id="ts-user-label" class="ts-user-label">guest</div>
-            <span id="ts-role-label" class="ts-role-label"></span>
+            <button id="ts-wallet-connect" class="ts-wallet-btn-small">
+                Connect TON wallet
+            </button>
+            <div class="ts-user-label-wrap">
+                <span id="ts-user-label" class="ts-user-label">guest</span>
+                <span id="ts-role-label" class="ts-role-label"></span>
+            </div>
         </div>
     </header>
 
-    <!-- Вторая строка: top-nav (категории верхнего уровня / trending и т.п. - позже дополним) -->
-    <nav class="ts-topline">
-        <!-- пока пустой, под Polymarket-style "Trending / New / ..." — добавим позже -->
-    </nav>
-
-    <!-- Панель поиска -->
+    <!-- SEARCH -->
     <div class="ts-search-wrap">
-        <input id="ts-search-input" class="ts-search-input" type="text" placeholder="Search..." />
+        <input id="ts-search-input" class="ts-search-input" type="text" placeholder="Search events..." />
         <button id="ts-filter-btn" class="ts-icon-btn" title="Filters">⚙️</button>
         <button id="ts-fav-btn" class="ts-icon-btn" title="Bookmarks">🔖</button>
     </div>
 
-    <!-- Категории рынков -->
+    <!-- CATEGORIES -->
     <div id="ts-categories" class="ts-categories"></div>
 
-    <!-- Доп. фильтры (заглушка, потом: активные, завершённые, ликвидность и т.п.) -->
+    <!-- STATUS FILTERS -->
     <div class="ts-filters-bar">
         <button class="ts-filter-chip ts-filter-chip-active" data-filter="active">Active</button>
         <button class="ts-filter-chip" data-filter="pending">Pending</button>
         <button class="ts-filter-chip" data-filter="resolved">Resolved</button>
     </div>
 
-    <!-- Блок курса TON / USDT + кошелёк -->
+    <!-- RATE + WALLET INFO -->
     <section class="ts-rate-wallet">
-        <div class="ts-rate-label">TON / USDT</div>
-        <div class="ts-rate-value" id="ts-rate-value">—</div>
-        <button id="ts-wallet-connect" class="ts-wallet-btn">Connect TON wallet</button>
+        <div>
+            <div class="ts-rate-label">TON / USDT</div>
+            <div class="ts-rate-value" id="ts-rate-value">—</div>
+        </div>
+        <div class="ts-rate-extra">Testnet · demo</div>
     </section>
 
-    <!-- Панель действий для ролей (creator/admin) -->
-    <section id="ts-role-actions" class="ts-role-actions" style="display: none;">
-        <!-- сюда app.js вставит нужные кнопки в зависимости от роли -->
-    </section>
+    <!-- ROLE ACTIONS (creator/admin) -->
+    <section id="ts-role-actions" class="ts-role-actions" style="display: none;"></section>
 
-    <!-- Список рынков -->
-    <main id="ts-markets-list" class="ts-markets-list">
-        <!-- Карточки рынков рендерятся в app.js -->
-    </main>
+    <!-- MARKETS LIST -->
+    <main id="ts-markets-list" class="ts-markets-list"></main>
 
-    <!-- Подвал-навигация -->
+    <!-- BOTTOM NAV -->
     <footer class="ts-bottom-nav">
         <button class="ts-bottom-nav-btn ts-bottom-nav-btn-active" data-nav="home">
             <span>Home</span>
@@ -94,11 +88,10 @@
         </button>
     </footer>
 
-    <!-- Сервисная зона: никаких дублей @truestake_bot -->
+    <!-- debug-блок оставляем, но скрытым и больше не трогаем -->
     <div id="ts-debug" class="ts-debug"></div>
 </div>
 
-<!-- Логика Mini App -->
 <script src="./app.js"></script>
 </body>
 </html>
