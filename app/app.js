@@ -2,15 +2,16 @@
 // Глобальное состояние
 // ===============================
 const state = {
-  lang: "en",
-  dict: {},
-  token: null,
-  user: null,
-  markets: [],
-  category: "all",
-  filterStatus: "active",
-  search: "",
-  loadingMarkets: false
+  lang: "en",            // текущий язык
+  dict: {},              // словарь
+  token: null,           // JWT от бэкенда
+  user: null,            // { id, username, role }
+  markets: [],           // список рынков
+  category: "all",       // активная категория
+  filterStatus: "active",// вкладка Active/Pending/Resolved
+  search: "",            // строка поиска
+  loadingMarkets: false, // показывать скелетоны
+  refreshTimer: null     // id setInterval для автопулла
 };
 
 // ===============================
@@ -39,16 +40,20 @@ function setLang(lang) {
   const searchInput = document.getElementById("ts-search-input");
   const langBtn = document.getElementById("ts-lang-current");
 
-  if (brandName)
+  if (brandName) {
     brandName.textContent = state.dict.brand_name || "TrueStake";
-  if (brandTagline)
+  }
+  if (brandTagline) {
     brandTagline.textContent =
       state.dict.brand_tagline || "on TON · Telegram Mini App";
-  if (searchInput)
+  }
+  if (searchInput) {
     searchInput.placeholder =
       state.dict.search_placeholder || "Search events...";
-  if (langBtn)
+  }
+  if (langBtn) {
     langBtn.textContent = lang === "ru" ? "🇷🇺" : "🇺🇸";
+  }
 
   renderCategories();
   renderMarkets();
@@ -67,22 +72,22 @@ function initApp() {
 
   const initialLang = detectLang(tg);
   setLang(initialLang);
-
   setupLangMenu();
+  setupCommonUI();
 
   if (tg && tg.initData) {
     tg.ready();
     fetchAuth(tg.initData)
-      .then(loadMarkets)
+      .then(() => loadMarkets())
+      .then(() => startAutoRefresh())
       .catch((err) => {
         logDebug("auth_error", err);
-        loadMarkets();
+        loadMarkets().then(() => startAutoRefresh());
       });
   } else {
-    loadMarkets();
+    // Открыто в браузере — гость
+    loadMarkets().then(() => startAutoRefresh());
   }
-
-  setupCommonUI();
 }
 
 // ===============================
@@ -96,19 +101,25 @@ async function fetchAuth(initData) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!data.ok || !data.token) throw new Error("auth_failed");
+  if (!data.ok || !data.token) {
+    throw new Error("auth_failed");
+  }
 
   state.token = data.token;
   state.user = data.user || null;
 
-  // Дополнительный запрос /auth/me для роли
+  // добиваем ролью
   try {
     const meRes = await fetch("https://api.corsarinc.ru/auth/me", {
       headers: { Authorization: "Bearer " + state.token }
     });
     const me = await meRes.json();
-    if (me.ok && me.user) state.user = me.user;
-  } catch (_) {}
+    if (me.ok && me.user) {
+      state.user = me.user;
+    }
+  } catch (_) {
+    // тихо
+  }
 
   renderUserHeader();
   renderRoleActions();
@@ -252,6 +263,7 @@ function renderRoleActions() {
   if (!state.user) return;
 
   const role = (state.user.role || "user").toLowerCase();
+
   if (role === "creator" || role === "admin") {
     box.style.display = "flex";
 
@@ -276,7 +288,7 @@ function renderRoleActions() {
 }
 
 // ===============================
-// Загрузка рынков
+// Загрузка рынков (основной вызов)
 // ===============================
 async function loadMarkets() {
   state.loadingMarkets = true;
@@ -300,6 +312,37 @@ async function loadMarkets() {
 }
 
 // ===============================
+// Мягкий автопулл без скелетонов
+// ===============================
+async function softRefreshMarkets() {
+  try {
+    const res = await fetch("https://api.corsarinc.ru/markets");
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.markets)) {
+      // Обновляем только если реально поменялось
+      const oldJson = JSON.stringify(state.markets || []);
+      const newJson = JSON.stringify(data.markets || []);
+      if (oldJson !== newJson) {
+        state.markets = data.markets;
+        renderMarkets();
+      }
+    }
+  } catch (e) {
+    logDebug("markets_autorefresh_error", e);
+  }
+}
+
+function startAutoRefresh() {
+  if (state.refreshTimer) {
+    clearInterval(state.refreshTimer);
+  }
+  // каждые 20 секунд тянем обновления
+  state.refreshTimer = setInterval(() => {
+    softRefreshMarkets();
+  }, 20000);
+}
+
+// ===============================
 // Рендер рынков + скелетоны
 // ===============================
 function renderMarkets() {
@@ -314,6 +357,16 @@ function renderMarkets() {
 
   let markets = (state.markets || []).slice();
 
+  // фильтр по табу статуса (Active/Pending/Resolved)
+  const tab = state.filterStatus || "active";
+  if (tab === "active") {
+    markets = markets.filter((m) => (m.status || "active") === "active");
+  } else if (tab === "pending") {
+    markets = markets.filter((m) => (m.status || "") === "pending");
+  } else if (tab === "resolved") {
+    markets = markets.filter((m) => (m.status || "") === "resolved");
+  }
+
   // фильтр по категории
   if (state.category && state.category !== "all") {
     markets = markets.filter(
@@ -324,9 +377,7 @@ function renderMarkets() {
   // поиск
   if (state.search) {
     markets = markets.filter((m) =>
-      (m.question || "")
-        .toLowerCase()
-        .includes(state.search)
+      (m.question || "").toLowerCase().includes(state.search)
     );
   }
 
@@ -400,7 +451,7 @@ function renderMarkets() {
   });
 }
 
-// Скелетоны: 3 карточки, чтобы видно было, где события
+// Скелетоны: 3 карточки
 function renderSkeletons(list) {
   for (let i = 0; i < 3; i++) {
     const card = document.createElement("div");
@@ -429,7 +480,7 @@ function renderSkeletons(list) {
 }
 
 // ===============================
-// DEBUG -> только в консоль
+// DEBUG (в консоль)
 // ===============================
 function logDebug(label, payload) {
   try {
