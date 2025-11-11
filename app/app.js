@@ -1,386 +1,470 @@
-// =====================================
+// ===============================
 // TrueStake Mini App frontend
-// =====================================
+// ===============================
 
-// Базовый API
+// Базовый URL бэкенда
 const API_BASE = "https://api.corsarinc.ru";
 
-// Глобальное состояние
+// Глобальное состояние приложения
 const state = {
-  lang: "en",          // текущий язык
-  dict: {},            // словарь
-  token: null,         // JWT
-  user: null,          // { id, username, role }
-  markets: [],         // список рынков
-  status: "active",    // active | pending | resolved
-  category: "all",     // фильтр категорий
-  search: "",          // строка поиска
-  refreshTimer: null
+  lang: "ru",              // текущий язык
+  dict: window.I18N_RU,    // активный словарь
+  token: null,             // JWT токен
+  user: null,              // { id, username, role }
+  role: "guest",           // guest | user | creator | admin
+  tab: "active",           // active | pending | resolved
+  category: "all",         // фильтр категорий
+  search: "",              // строка поиска
+  markets: [],             // список рынков
+  loading: false,          // флаг загрузки рынков
+  marketsTimerId: null,    // id setInterval
 };
 
-// =====================================
-// I18N (минимум ru/en, можно расширять)
-// =====================================
-
-const I18N = {
-  en: {
-    create_market_btn: "+ Create market",
-    role_guest: "guest",
-    role_creator: "creator",
-    role_admin: "admin",
-    no_markets: "No markets yet.",
-    creator_hint: "Creator can add the first one.",
-    connect_wallet: "Connect TON wallet"
-  },
-  ru: {
-    create_market_btn: "+ Создать рынок",
-    role_guest: "гость",
-    role_creator: "креатор",
-    role_admin: "админ",
-    no_markets: "Пока нет рыночных событий.",
-    creator_hint: "Создатель может добавить событие.",
-    connect_wallet: "Подключить TON-кошелёк"
-  }
-};
-
-function setLang(lang) {
-  if (!I18N[lang]) lang = "en";
-  state.lang = lang;
-  state.dict = I18N[lang];
-
-  const langBtn = document.getElementById("lang-toggle");
-  if (langBtn) {
-    langBtn.textContent = lang.toUpperCase();
-  }
-
-  const walletBtn = document.getElementById("wallet-btn");
-  if (walletBtn && state.dict.connect_wallet) {
-    walletBtn.textContent = state.dict.connect_wallet;
-  }
-
-  renderMarkets(); // перерисовать надписи
+// Утилита логов (чтобы видеть, что происходит)
+function tsLog(...args) {
+  console.log("[TrueStake]", ...args);
 }
 
-// =====================================
-// Роли / пользователь
-// =====================================
+// ===============================
+// DOM-элементы (один раз)
+// ===============================
+const els = {};
 
-function setUser(user, token) {
-  state.user = user || null;
-  state.token = token || null;
+function initDomRefs() {
+  els.username = document.getElementById("ts-username");
+  els.rolePill = document.getElementById("ts-role-pill");
+  els.langToggle = document.getElementById("ts-lang-toggle");
+  els.connectWallet = document.getElementById("ts-connect-wallet");
 
-  const pill = document.getElementById("user-pill");
-  const roleLabel = document.getElementById("user-role-label");
-  const createBtn = document.getElementById("create-market-btn");
+  els.tabActive = document.getElementById("ts-tab-active");
+  els.tabPending = document.getElementById("ts-tab-pending");
+  els.tabResolved = document.getElementById("ts-tab-resolved");
 
-  // если каких-то элементов нет — тихо выходим, без падений
-  if (!pill || !roleLabel || !createBtn) {
-    return;
+  els.categories = document.querySelectorAll("[data-ts-category]");
+  els.searchInput = document.getElementById("ts-search-input");
+
+  els.marketsList = document.getElementById("ts-markets-list");
+  els.marketsError = document.getElementById("ts-markets-error");
+
+  els.btnCreateMarket = document.getElementById("ts-btn-create-market");
+  els.btnAdminPanel = document.getElementById("ts-btn-admin-panel");
+}
+
+// ===============================
+// i18n
+// ===============================
+
+function applyLang(lang) {
+  if (lang !== "ru" && lang !== "en") lang = "en";
+
+  state.lang = lang;
+  state.dict = lang === "ru" ? window.I18N_RU : window.I18N_EN;
+
+  if (els.langToggle) {
+    els.langToggle.textContent = lang === "ru" ? "RU" : "EN";
+  }
+
+  // Переводы простых текстов здесь при необходимости.
+  renderHeader();
+  renderMarkets();
+}
+
+// ===============================
+// Авторизация
+// ===============================
+
+// Сохранить токен локально
+function saveToken(token) {
+  if (!token) return;
+  state.token = token;
+  try {
+    localStorage.setItem("ts_token", token);
+  } catch (e) {
+    tsLog("localStorage error", e);
+  }
+}
+
+// Прочитать токен из localStorage
+function loadTokenFromStorage() {
+  try {
+    const t = localStorage.getItem("ts_token");
+    if (t) {
+      state.token = t;
+      return t;
+    }
+  } catch (e) {
+    tsLog("localStorage read error", e);
+  }
+  return null;
+}
+
+// Установить пользователя в стейт
+function setUser(user, tokenFromResponse) {
+  if (tokenFromResponse) {
+    saveToken(tokenFromResponse);
   }
 
   if (!user) {
-    roleLabel.textContent = I18N[state.lang].role_guest || "guest";
-    createBtn.style.display = "none";
-    return;
-  }
-
-  // роль из backend (user.role), если нет — считаем user
-  const rawRole = (user.role || "user").toLowerCase();
-  let prettyRole = rawRole;
-
-  if (rawRole === "admin") {
-    prettyRole = I18N[state.lang].role_admin || "admin";
-  } else if (rawRole === "creator") {
-    prettyRole = I18N[state.lang].role_creator || "creator";
-  } else if (rawRole === "user") {
-    prettyRole = I18N[state.lang].role_guest || "user";
-  }
-
-  const uname = user.username
-    ? "@" + user.username
-    : String(user.id || "");
-
-  roleLabel.textContent = `${uname} · ${prettyRole}`;
-
-  // Права:
-  // creator / admin — видят кнопку создания рынка
-  if (rawRole === "creator" || rawRole === "admin") {
-    createBtn.style.display = "inline-flex";
-    createBtn.textContent =
-      state.dict.create_market_btn || "+ Create market";
+    state.user = null;
+    state.role = "guest";
   } else {
-    createBtn.style.display = "none";
+    state.user = {
+      id: user.id,
+      username: user.username || "guest",
+      role: (user.role || "user").toLowerCase(),
+    };
+    state.role = state.user.role;
   }
+
+  renderHeader();
+  renderRoleControls();
 }
 
-// =====================================
-// Auth через Telegram Mini App
-// =====================================
+// Авторизация через Telegram WebApp (/auth/telegram)
+async function tryTelegramAuth() {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || !tg.initData) {
+    tsLog("No Telegram WebApp initData, skip /auth/telegram");
+    return false;
+  }
 
-// 1) Пытаемся считать язык из Telegram, чтобы сразу выбрать ru/en
-function detectLangFromTelegram() {
   try {
-    if (window.Telegram && window.Telegram.WebApp) {
-      const unsafe = window.Telegram.WebApp.initDataUnsafe || {};
-      const lc = (unsafe.user && unsafe.user.language_code) || "";
-      if (lc.startsWith("ru")) return "ru";
-      if (lc.startsWith("en")) return "en";
-    }
-  } catch (e) {}
-  return "en";
-}
-
-// 2) Получаем токен по initData
-async function authFromTelegram() {
-  try {
-    if (!(window.Telegram && window.Telegram.WebApp)) {
-      // не в Telegram — остаёмся гостем
-      return;
-    }
-
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-
-    const initData = tg.initData || "";
-    if (!initData) {
-      // нет initData — остаёмся гостем
-      return;
-    }
-
     const res = await fetch(`${API_BASE}/auth/telegram`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData })
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        init_data: tg.initData,
+        origin: window.location.origin,
+        platform: tg.platform || "webapp",
+      }),
     });
 
-    const data = await res.json();
-    if (!data.ok || !data.token) {
-      return;
-    }
+    const data = await res.json().catch(() => ({}));
+    tsLog("/auth/telegram response", data);
 
-    // Есть токен — дотягиваем роль через /auth/me
-    await authWithToken(data.token);
+    if (data && data.ok && data.token && data.user) {
+      setUser(data.user, data.token);
+      return true;
+    }
   } catch (e) {
-    console.log("[authFromTelegram][error]", e);
+    tsLog("/auth/telegram error", e);
   }
+
+  return false;
 }
 
-// 3) По токену тянем /auth/me, чтобы получить role
-async function authWithToken(token) {
+// Авторизация по уже сохранённому токену (/auth/me)
+async function tryAuthMe() {
+  const token = loadTokenFromStorage();
+  if (!token) return false;
+
   try {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: {
-        "Authorization": `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
-    const data = await res.json();
-    if (!data.ok || !data.user) {
-      return;
+    const data = await res.json().catch(() => ({}));
+    tsLog("/auth/me response", data);
+
+    if (data && data.ok && data.user) {
+      setUser(data.user, token);
+      return true;
     }
-
-    setUser(data.user, token);
   } catch (e) {
-    console.log("[authWithToken][error]", e);
+    tsLog("/auth/me error", e);
   }
-}
 
-// =====================================
-// Markets: загрузка и рендер
-// =====================================
-
-async function fetchMarkets(showSkeleton = false) {
-  const listEl = document.getElementById("markets-list");
-  if (!listEl) return;
-
+  // Токен невалиден — очищаем
   try {
-    if (showSkeleton) {
-      listEl.innerHTML = `
-        <div class="ts-market-skeleton"></div>
-        <div class="ts-market-skeleton"></div>
-        <div class="ts-market-skeleton"></div>
-      `;
-    }
+    localStorage.removeItem("ts_token");
+  } catch (e) {}
 
-    const params = new URLSearchParams();
-    params.set("status", state.status || "active");
-
-    if (state.category && state.category !== "all") {
-      params.set("category", state.category);
-    }
-
-    if (state.search && state.search.trim().length > 1) {
-      params.set("search", state.search.trim());
-    }
-
-    const res = await fetch(`${API_BASE}/markets?${params.toString()}`);
-    const data = await res.json();
-
-    if (!data.ok) {
-      listEl.innerHTML =
-        `<div class="ts-empty">[markets_error] ${data.error || ""}</div>`;
-      return;
-    }
-
-    state.markets = data.markets || [];
-    renderMarkets();
-  } catch (e) {
-    listEl.innerHTML =
-      `<div class="ts-empty">[markets_error] ${String(e)}</div>`;
-  }
+  state.token = null;
+  setUser(null, null);
+  return false;
 }
 
-function renderMarkets() {
-  const listEl = document.getElementById("markets-list");
-  if (!listEl) return;
+// Инициализация авторизации: сначала Telegram, потом /auth/me
+async function initAuth() {
+  // 1. Пробуем Telegram WebApp
+  const okTelegram = await tryTelegramAuth();
+  if (okTelegram) return;
 
-  if (!state.markets.length) {
-    const t = (state.dict.no_markets || "No markets yet.") +
-      " " +
-      (state.dict.creator_hint || "");
-    listEl.innerHTML = `<div class="ts-empty">${t}</div>`;
+  // 2. Пробуем существующий токен
+  const okMe = await tryAuthMe();
+  if (okMe) return;
+
+  // 3. Гость
+  tsLog("No auth, guest mode");
+  setUser(null, null);
+}
+
+// ===============================
+// Загрузка рынков
+// ===============================
+
+function buildMarketsQuery() {
+  const params = new URLSearchParams();
+  params.set("status", state.tab || "active");
+
+  if (state.category && state.category !== "all") {
+    params.set("category", state.category);
+  }
+
+  if (state.search && state.search.trim().length > 0) {
+    params.set("search", state.search.trim());
+  }
+
+  return params.toString();
+}
+
+function renderSkeleton() {
+  if (!els.marketsList) return;
+  els.marketsError && (els.marketsError.textContent = "");
+
+  const skeleton = [];
+  for (let i = 0; i < 3; i++) {
+    skeleton.push(`
+      <div class="market-card skeleton">
+        <div class="market-card-left">
+          <div class="market-logo skeleton-box"></div>
+          <div class="market-text">
+            <div class="skeleton-line w-70"></div>
+            <div class="skeleton-line w-40"></div>
+          </div>
+        </div>
+        <div class="market-card-right">
+          <div class="skeleton-pill"></div>
+          <div class="skeleton-pill"></div>
+        </div>
+      </div>
+    `);
+  }
+
+  els.marketsList.innerHTML = skeleton.join("");
+}
+
+// Рендер рынков
+function renderMarkets() {
+  if (!els.marketsList) return;
+
+  els.marketsError && (els.marketsError.textContent = "");
+
+  if (state.loading) {
+    renderSkeleton();
     return;
   }
 
-  listEl.innerHTML = state.markets.map(renderMarketCard).join("");
-}
-
-function renderMarketCard(m) {
-  const prob = typeof m.prob_yes === "number" ? m.prob_yes : 50;
-  const yes = Math.round(prob);
-  const no = 100 - yes;
-  const logo = m.logo_url || "/assets/logo.png";
-  const cat = m.category || "—";
-
-  return `
-    <div class="ts-market-card">
-      <div class="ts-market-left">
-        <div class="ts-market-logo-wrap">
-          <img src="${logo}" class="ts-market-logo" alt="">
-        </div>
-      </div>
-      <div class="ts-market-main">
-        <div class="ts-market-title">${escapeHtml(m.question || "")}</div>
-        <div class="ts-market-meta">
-          <span class="ts-market-label">${cat}</span>
-          <span class="ts-market-label">$${(m.volume_usd || 0).toLocaleString()} Vol.</span>
-        </div>
-        <div class="ts-market-actions">
-          <div class="ts-pill-yes">Yes <span>${yes}%</span></div>
-          <div class="ts-pill-no">No <span>${no}%</span></div>
-        </div>
-      </div>
-      <div class="ts-market-right">
-        <button class="ts-icon-btn" title="Share">↗</button>
-        <button class="ts-icon-btn" title="Watchlist">☆</button>
-      </div>
-    </div>
-  `;
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-// =====================================
-// Create Market (UI пока на потом)
-// (кнопка уже прячется/показывается по роли)
-// =====================================
-
-function openCreateModal() {
-  const modal = document.getElementById("create-market-modal");
-  if (modal) modal.classList.remove("hidden");
-}
-
-function closeCreateModal() {
-  const modal = document.getElementById("create-market-modal");
-  if (modal) modal.classList.add("hidden");
-}
-
-async function submitCreateMarket() {
-  // форму мы доделаем следующим шагом
-}
-
-// =====================================
-// Init
-// =====================================
-
-async function init() {
-  // Язык: сначала из Telegram, иначе en
-  const lang = detectLangFromTelegram();
-  setLang(lang);
-
-  // обработчик переключения языка (RU/EN)
-  const langBtn = document.getElementById("lang-toggle");
-  if (langBtn) {
-    langBtn.addEventListener("click", () => {
-      setLang(state.lang === "ru" ? "en" : "ru");
-      // перерисовка роли в новом языке
-      setUser(state.user, state.token);
-    });
+  if (!state.markets || state.markets.length === 0) {
+    els.marketsList.innerHTML =
+      `<div class="markets-empty">${state.dict.no_markets || "Пока нет рынков."}</div>`;
+    return;
   }
 
-  // кнопка создания рынка
-  const createBtn = document.getElementById("create-market-btn");
-  if (createBtn) {
-    createBtn.addEventListener("click", () => {
-      if (!state.user) return;
-      openCreateModal();
-    });
-  }
+  const cards = state.markets.map((m) => {
+    const prob = typeof m.prob_yes === "number" ? m.prob_yes : 50;
+    const vol = typeof m.volume_usd === "number" ? m.volume_usd : 0;
+    const volStr = `$${vol.toLocaleString("en-US")} Vol.`;
+    const cat = m.category || "";
 
-  const cmClose = document.getElementById("create-market-close");
-  const cmCancel = document.getElementById("cm-cancel");
-  const cmSubmit = document.getElementById("cm-submit");
-
-  if (cmClose) cmClose.addEventListener("click", closeCreateModal);
-  if (cmCancel) cmCancel.addEventListener("click", closeCreateModal);
-  if (cmSubmit) cmSubmit.addEventListener("click", submitCreateMarket);
-
-  // Категории (если в index.html расставлены data-category)
-  document.querySelectorAll("[data-category]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.category = btn.getAttribute("data-category") || "all";
-      fetchMarkets(true);
-    });
+    return `
+      <div class="market-card">
+        <div class="market-card-left">
+          <div class="market-logo">
+            <img src="${m.logo_url || "./assets/logo.png"}" alt="">
+          </div>
+          <div class="market-text">
+            <div class="market-question">${m.question}</div>
+            <div class="market-meta">
+              <span class="market-volume">${volStr}</span>
+              ${cat ? `<span class="market-category">${cat}</span>` : ""}
+            </div>
+          </div>
+        </div>
+        <div class="market-card-right">
+          <div class="market-buttons">
+            <button class="btn-yes">Yes</button>
+            <button class="btn-no">No</button>
+          </div>
+          <div class="market-prob">
+            ${prob}% Yes
+          </div>
+        </div>
+      </div>
+    `;
   });
 
-  // Табы статуса (Active/Pending/Resolved)
-  document.querySelectorAll("[data-status]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.status = btn.getAttribute("data-status") || "active";
-      fetchMarkets(true);
-    });
-  });
-
-  // Поиск
-  const searchInput = document.getElementById("search-input");
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      state.search = e.target.value || "";
-      // не ддосим: лёгкая задержка могла бы быть, но пока просто дергаем
-      fetchMarkets(true);
-    });
-  }
-
-  // 1) Авторизация через Telegram (если есть)
-  await authFromTelegram();
-
-  // 2) Первый запрос рынков
-  await fetchMarkets(true);
-
-  // 3) Периодическое обновление каждые 20 секунд
-  if (state.refreshTimer) clearInterval(state.refreshTimer);
-  state.refreshTimer = setInterval(fetchMarkets, 20000);
+  els.marketsList.innerHTML = cards.join("");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+// Запрос рынков
+async function loadMarkets() {
+  state.loading = true;
+  renderMarkets();
+
+  const qs = buildMarketsQuery();
+  const url = `${API_BASE}/markets?${qs}`;
+
   try {
-    init();
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    tsLog("GET /markets", url, data);
+
+    if (!data || !data.ok || !Array.isArray(data.markets)) {
+      throw new Error("bad_markets_response");
+    }
+
+    state.markets = data.markets;
+    state.loading = false;
+    renderMarkets();
   } catch (e) {
-    console.error("[init][fatal]", e);
+    tsLog("loadMarkets error", e);
+    state.loading = false;
+    state.markets = [];
+    renderMarkets();
+    if (els.marketsError) {
+      els.marketsError.textContent = "[markets_error]";
+    }
   }
-});
+}
+
+// ===============================
+// Роли и кнопки
+// ===============================
+
+function renderHeader() {
+  if (els.username) {
+    els.username.textContent =
+      state.user && state.user.username
+        ? `@${state.user.username}`
+        : "guest";
+  }
+
+  if (els.rolePill) {
+    let text = "guest";
+    if (state.role === "admin") text = "admin";
+    else if (state.role === "creator") text = "creator";
+    else if (state.role === "user") text = "user";
+
+    els.rolePill.textContent = text;
+    els.rolePill.style.display = text === "guest" ? "none" : "inline-flex";
+  }
+}
+
+function renderRoleControls() {
+  // creator/admin: показываем кнопку создания рынка
+  if (els.btnCreateMarket) {
+    els.btnCreateMarket.style.display =
+      state.role === "creator" || state.role === "admin"
+        ? "inline-flex"
+        : "none";
+  }
+
+  // admin: показываем "админку" (пока заглушка)
+  if (els.btnAdminPanel) {
+    els.btnAdminPanel.style.display =
+      state.role === "admin" ? "inline-flex" : "none";
+  }
+}
+
+// ===============================
+// Обработчики UI
+// ===============================
+
+function bindEvents() {
+  if (els.langToggle) {
+    els.langToggle.addEventListener("click", () => {
+      applyLang(state.lang === "ru" ? "en" : "ru");
+      loadMarkets();
+    });
+  }
+
+  if (els.searchInput) {
+    els.searchInput.addEventListener("input", (e) => {
+      state.search = e.target.value || "";
+      // лёгкий debounce тут не обязателен, просто сразу:
+      loadMarkets();
+    });
+  }
+
+  if (els.tabActive) {
+    els.tabActive.addEventListener("click", () => {
+      state.tab = "active";
+      setActiveTabButton("active");
+      loadMarkets();
+    });
+  }
+  if (els.tabPending) {
+    els.tabPending.addEventListener("click", () => {
+      state.tab = "pending";
+      setActiveTabButton("pending");
+      loadMarkets();
+    });
+  }
+  if (els.tabResolved) {
+    els.tabResolved.addEventListener("click", () => {
+      state.tab = "resolved";
+      setActiveTabButton("resolved");
+      loadMarkets();
+    });
+  }
+
+  if (els.categories && els.categories.length) {
+    els.categories.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cat = btn.getAttribute("data-ts-category") || "all";
+        state.category = cat;
+        els.categories.forEach((b) =>
+          b.classList.toggle("active", b === btn)
+        );
+        loadMarkets();
+      });
+    });
+  }
+
+  if (els.btnCreateMarket) {
+    els.btnCreateMarket.addEventListener("click", () => {
+      alert("Create Market: здесь будет форма для креатора.");
+    });
+  }
+
+  if (els.btnAdminPanel) {
+    els.btnAdminPanel.addEventListener("click", () => {
+      alert("Admin Panel: здесь будут инструменты админа.");
+    });
+  }
+}
+
+// Подсветка активного таба
+function setActiveTabButton(tab) {
+  if (!els.tabActive || !els.tabPending || !els.tabResolved) return;
+  els.tabActive.classList.toggle("active", tab === "active");
+  els.tabPending.classList.toggle("active", tab === "pending");
+  els.tabResolved.classList.toggle("active", tab === "resolved");
+}
+
+// ===============================
+// Инициализация
+// ===============================
+
+async function initApp() {
+  initDomRefs();
+  bindEvents();
+  applyLang("ru"); // дефолт — RU, дальше юзер переключит
+
+  setActiveTabButton("active");
+
+  await initAuth();   // определяем guest/creator/admin
+  await loadMarkets();
+
+  // Пуллим рынки каждые 15 секунд (живое обновление)
+  if (state.marketsTimerId) clearInterval(state.marketsTimerId);
+  state.marketsTimerId = setInterval(loadMarkets, 15000);
+}
+
+// Запуск
+document.addEventListener("DOMContentLoaded", initApp);
